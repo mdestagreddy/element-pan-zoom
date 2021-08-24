@@ -419,13 +419,13 @@ HTMLElement.prototype.ElementPanZoom = function() {
         }
         else {
           b = (el.clientWidth > el.clientHeight ? el.clientHeight : el.clientWidth) / 2;
-          hh = ((gesture.newDistance - gesture.distance) / b);
+          hh = ((gesture.newDistance - gesture.distance) / b) * (0.5 + gesture.c.scale / 2);
           th1x = (gesture.move1.x - gesture.start1.x);
           th2x = (gesture.move2.x - gesture.start2.x);
-          tr.x = gesture.c.x + ((th1x + th2x) / 2) + gesture.tar.x * hh * (dim.targetWidth / el.clientWidth) * gesture.c.scale / 2;
+          tr.x = gesture.c.x + ((th1x + th2x) / 2) + (gesture.tar.x + gesture.c.x / 2) * hh;
           th1y = (gesture.move1.y - gesture.start1.y);
           th2y = (gesture.move2.y - gesture.start2.y);
-          tr.y = gesture.c.y + ((th1y + th2y) / 2) + gesture.tar.y * hh * (dim.targetHeight / el.clientHeight) * gesture.c.scale / 2;
+          tr.y = gesture.c.y + ((th1y + th2y) / 2) + (gesture.tar.y + gesture.c.y / 2) * hh;
           tr.scale = _clamp(0.01, Infinity, gesture.c.scale + hh);
         }
       }
