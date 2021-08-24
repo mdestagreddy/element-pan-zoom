@@ -300,8 +300,8 @@ HTMLElement.prototype.ElementPanZoom = function() {
       }
       if (tr.scale > dim.maxZoomed.scale) {
         _animate(opt.easeZoom,
-          tr.x,
-          tr.y,
+          tr.x / (tr.scale / dim.maxZoomed.scale),
+          tr.y / (tr.scale / dim.maxZoomed.scale),
           dim.maxZoomed.scale, opt.easeZoomDuration);
       }
       
@@ -335,14 +335,14 @@ HTMLElement.prototype.ElementPanZoom = function() {
       dim.h = el.clientWidth / dim.targetRatio;
       dim.left = 0;
       dim.top = (el.clientHeight - dim.h) / 2;
-      dim.maxZoomed.scale = _clamp(_clamp(2, Infinity, dim.targetRatio / dim.boxRatio), Infinity, opt.maxScale);
+      dim.maxZoomed.scale = _clamp(_clamp(2, Infinity, dim.targetRatio / dim.boxRatio), Infinity, _clamp(1, 64, opt.maxScale));
     }
     else {
       dim.w = el.clientHeight * dim.targetRatio;
       dim.h = el.clientHeight;
       dim.left = (el.clientWidth - dim.w) / 2;
       dim.top = 0;
-      dim.maxZoomed.scale = _clamp(_clamp(2, Infinity, dim.boxRatio / dim.targetRatio), Infinity, opt.maxScale);
+      dim.maxZoomed.scale = _clamp(_clamp(2, Infinity, dim.boxRatio / dim.targetRatio), Infinity, _clamp(1, 64, opt.maxScale));
     }
     dim.maxZoomed.x = _clamp(0, Infinity, (dim.w * dim.maxZoomed.scale) - el.clientWidth) / 2;
     dim.maxZoomed.y = _clamp(0, Infinity, (dim.h * dim.maxZoomed.scale) - el.clientHeight) / 2;
@@ -422,10 +422,10 @@ HTMLElement.prototype.ElementPanZoom = function() {
           hh = ((gesture.newDistance - gesture.distance) / b) * (0.5 + gesture.c.scale / 2);
           th1x = (gesture.move1.x - gesture.start1.x);
           th2x = (gesture.move2.x - gesture.start2.x);
-          tr.x = gesture.c.x + ((th1x + th2x) / 2) + (gesture.tar.x + gesture.c.x / 2) * hh;
+          tr.x = gesture.c.x + ((th1x + th2x) / 2) + (gesture.tar.x + gesture.c.x / 2) * hh / (gesture.c.scale / 2);
           th1y = (gesture.move1.y - gesture.start1.y);
           th2y = (gesture.move2.y - gesture.start2.y);
-          tr.y = gesture.c.y + ((th1y + th2y) / 2) + (gesture.tar.y + gesture.c.y / 2) * hh;
+          tr.y = gesture.c.y + ((th1y + th2y) / 2) + (gesture.tar.y + gesture.c.y / 2) * hh / (gesture.c.scale / 2);
           tr.scale = _clamp(0.01, Infinity, gesture.c.scale + hh);
         }
       }
