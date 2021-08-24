@@ -1,3 +1,4 @@
+"use strict";
 HTMLElement.prototype.ElementPanZoom = function() {
   let el = this;
   let ta = el.querySelector("*");
