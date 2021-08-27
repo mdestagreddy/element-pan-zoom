@@ -459,9 +459,8 @@ function ElementPanZoom(elem) {
   });
   
   let _resize = () => {
-    let svg = ta.tagName == "SVG" ? ta.getBoundingClientRect() : null;
-    dim.targetWidth = (svg != null ? svg.width : 0) || ta.videoWidth || ta.naturalWidth || ta.clientWidth;
-    dim.targetHeight = (svg != null ? svg.height : 0) || ta.videoHeight || ta.naturalHeight || ta.clientHeight;
+    dim.targetWidth = ta.videoWidth || ta.naturalWidth || ta.clientWidth;
+    dim.targetHeight = ta.videoHeight || ta.naturalHeight || ta.clientHeight;
     dim.boxRatio = el.clientWidth / el.clientHeight;
     dim.targetRatio = dim.targetWidth / dim.targetHeight;
     if (dim.boxRatio < dim.targetRatio) {
