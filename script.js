@@ -1,8 +1,105 @@
-HTMLElement.prototype.ElementPanZoom = function() {
-  let el = this;
+function ElementPanZoom(elem) {
+  let init = this;
+  let error = {}
+  
+  let el = typeof elem == "string" ? document.querySelector(elem) : elem;
   let ta = el.querySelector("*");
+  if (el.hasAttribute("element-pan-zoom-init")) {
+    error.inited = `Warning: ${el} is already inited.`;
+    console.warn(error.inited);
+    return;
+  }
+  el.setAttribute("element-pan-zoom-init", "");
+  
+  init.translation = {
+    x: 0,
+    y: 0,
+    scale: 0
+  }
+  init.dimension = {
+    container: {
+      width: 0,
+      height: 0,
+      ratio: 0
+    },
+    content: {
+      width: 0,
+      height: 0,
+      ratio: 0,
+      left: 0,
+      top: 0
+    },
+    width: 0,
+    height: 0,
+    max: {
+      x: 0,
+      y: 0,
+      scale: 0
+    }
+  }
+  init.isAnimate = false;
+  init.gesture = {
+    start: { x: 0, y: 0 },
+    move: { x: 0, y: 0 },
+    start_2: { x: 0, y: 0 },
+    move_2: { x: 0, y: 0 },
+    started: false,
+    length: 0,
+    event: {
+      start: undefined,
+      move: undefined,
+      end: undefined
+    }
+  }
+  
+  init._events = {}
+  init.on = (type, fn) => {
+    if ( !init._events[type] ) {
+      init._events[type] = [];
+    }
+  
+    init._events[type].push(fn);
+  }
+  init.off = (type, fn) => {
+    if ( !init._events[type] ) { return; }
+    
+    let index = init._events[type].indexOf(fn);
+    
+    if ( index > -1 ) {
+      init._events[type].splice(index, 1);
+    }
+  }
+  init._execEvent = (type) => {
+    if ( !init._events[type] ) { return; }
+    
+    let i = 0;
+    l = init._events[type].length;
+  
+    if ( !l ) { return; }
+  
+    for ( ; i < l; i++ ) {
+      init._events[type][i].apply(init, [].slice.call(arguments, 1));
+    }
+  }
+  
+  init.ev = {
+    moving: {x: 0, y: 0, scale: 0},
+    end: {e: false}
+  }
+  
+  init.el = {
+    container: el,
+    content: ta
+  }
+  
+  if (!ta) {
+    error.child = "Your need element this child.";
+    console.error(error.child);
+    throw TypeError(error.child);
+    return;
+  }
   let _bezier = (easingType, x) => {
-    let eType = easingType.toLowerCase();
+    let eType = (easingType ? easingType : "").toLowerCase();
     
     if (eType == "easein.sine") {
       return 1 - Math.cos((x * Math.PI) / 2);
@@ -85,7 +182,7 @@ HTMLElement.prototype.ElementPanZoom = function() {
       return x;
     }
     else {
-      return x;
+      return 1 - Math.pow(1 - x, 3);
     }
   }
   let listeners = (eventsType, fn) => {
@@ -115,7 +212,6 @@ HTMLElement.prototype.ElementPanZoom = function() {
     return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
   }
   let animLoop;
-  let error = {}
   let dim = {
     rect: el.getBoundingClientRect(),
     targetWidth: 0, targetHeight: 0,
@@ -139,7 +235,7 @@ HTMLElement.prototype.ElementPanZoom = function() {
     initialX: Number(el.getAttribute("x") || 0),
     initialY: Number(el.getAttribute("y") || 0),
     motionDeceleration: _clamp(0.01, 0.25, Number(el.getAttribute("deceleration") || 0.03)),
-    motionStop: _clamp(0.01, 4, Number(el.getAttribute("stopMotion") || 0.125)),
+    motionStop: _clamp(0.01, 4, Number(el.getAttribute("stop-motion") || 0.125)),
     easeZoom: el.getAttribute("ease-zoom") || "easeout.expo",
     easeZoomDuration: _clamp(100, 750, Number(el.getAttribute("ease-zoom-duration") || 500))
   }
@@ -186,23 +282,28 @@ HTMLElement.prototype.ElementPanZoom = function() {
     vel: {x: 0, y: 0}
   }
   let _animate = (easing, x, y, scale, duration) => {
-    duration = duration ? duration : 0;
-    anim.a.finish = false;
-    anim.a.timestart = performance.now();
-    anim.a.easeName = easing;
-    anim.a.s.x = tr.x;
-    anim.a.s.y = tr.y;
-    anim.a.s.scale = tr.scale;
-    anim.a.e.x = _clamp(0 - dim.maxZoomed.x, dim.maxZoomed.x, x);
-    anim.a.e.y = _clamp(0 - dim.maxZoomed.y, dim.maxZoomed.y, y);
-    anim.a.e.scale = _clamp(1, dim.maxZoomed.scale, scale);
-    anim.a.duration = duration;
+    if (init.isAnimate) {
+      duration = duration ? duration : 0;
+      anim.a.finish = false;
+      anim.a.timestart = performance.now();
+      anim.a.easeName = easing;
+      anim.a.s.x = tr.x;
+      anim.a.s.y = tr.y;
+      anim.a.s.scale = tr.scale;
+      ix = _clamp(0, Infinity, (dim.w * _clamp(1, dim.maxZoomed.scale, scale)) - el.clientWidth) / 2;
+      iy = _clamp(0, Infinity, (dim.h * _clamp(1, dim.maxZoomed.scale, scale)) - el.clientHeight) / 2;
+      anim.a.e.x = _clamp(0 - ix, ix, x);
+      anim.a.e.y = _clamp(0 - iy, iy, y);
+      anim.a.e.scale = _clamp(1, dim.maxZoomed.scale, scale);
+      anim.a.duration = duration;
+    }
   }
   
   listeners("touchstart mousedown", (e) => {
+    init.gesture.event.start = e;
     anim.a.finish = true;
     if (gesture.d != true && anim.a.finish == true) {
-      gesture.length = e.touches ? e.touches.length : 0;
+      gesture.length = e.touches ? e.touches.length : 1;
       gesture.c.x = tr.x;
       gesture.c.y = tr.y;
       gesture.c.scale = tr.scale;
@@ -225,15 +326,30 @@ HTMLElement.prototype.ElementPanZoom = function() {
       gesture.md.x = tr.x;
       gesture.md.y = tr.y;
       gesture.d = true;
+      gesture.m = false;
+      init.gesture.started = true;
       if (tr.scale != 1) {
         e.stopPropagation();
       }
+      
+      init.gesture.start.x = gesture.start1.x;
+      init.gesture.start.y = gesture.start1.y;
+      init.gesture.start_2.x = gesture.start2.x;
+      init.gesture.start_2.y = gesture.start2.y;
+      init.gesture.move.x = gesture.move1.x;
+      init.gesture.move.y = gesture.move1.y;
+      init.gesture.move_2.x = gesture.move2.x;
+      init.gesture.move_2.y = gesture.move2.y;
+      init.gesture.length = gesture.length;
+      
+      init._execEvent("gesture.start");
     }
   });
   listeners("touchmove mousemove", (e) => {
-    if (e.touches && anim.a.finish == true) { gesture.d = true }
+    init.gesture.event.move = e;
+    if (e.touches && anim.a.finish == true) { gesture.d = true; init.gesture.started = true; }
     if (gesture.d == true && anim.a.finish == true) {
-      gesture.length = e.touches ? e.touches.length : 0;
+      gesture.length = e.touches ? e.touches.length : 1;
       gesture.move1.x = e.touches ? e.touches[0].clientX : e.clientX;
       gesture.move1.y = e.touches ? e.touches[0].clientY : e.clientY;
       if (e.touches && gesture.length >= 2) {
@@ -270,9 +386,22 @@ HTMLElement.prototype.ElementPanZoom = function() {
       if (tr.scale != 1) {
         e.stopPropagation();
       }
+      
+      init.gesture.start.x = gesture.start1.x;
+      init.gesture.start.y = gesture.start1.y;
+      init.gesture.start_2.x = gesture.start2.x;
+      init.gesture.start_2.y = gesture.start2.y;
+      init.gesture.move.x = gesture.move1.x;
+      init.gesture.move.y = gesture.move1.y;
+      init.gesture.move_2.x = gesture.move2.x;
+      init.gesture.move_2.y = gesture.move2.y;
+      init.gesture.length = gesture.length;
+      
+      init._execEvent("gesture.move");
     }
   });
   listeners("touchend mouseleave mouseup", (e) => {
+    init.gesture.event.end = e;
     if (gesture.d == true && anim.a.finish == true) {
       if (e.mouseleave) {
         gesture.c.x = tr.x;
@@ -307,9 +436,13 @@ HTMLElement.prototype.ElementPanZoom = function() {
       
       gesture.m = false;
       gesture.d = false;
+      init.gesture.started = false;
+      init.gesture.length = gesture.length;
+      
       if (tr.scale != 1) {
         e.stopPropagation();
       }
+      init._execEvent("gesture.end");
     }
   });
   listeners("dblclick", () => {
@@ -359,6 +492,22 @@ HTMLElement.prototype.ElementPanZoom = function() {
     tr.scale = _clamp(1, dim.maxZoomed.scale, opt.initialScale);
     tr.x = _clamp(0 - dim.zoomed.x, dim.zoomed.x, opt.initialX);
     tr.y = _clamp(0 - dim.zoomed.y, dim.zoomed.y, opt.initialY);
+    
+    init.dimension.container.width = el.clientWidth;
+    init.dimension.container.height = el.clientHeight;
+    init.dimension.container.ratio = dim.boxRatio;
+    
+    init.dimension.content.width = dim.w;
+    init.dimension.content.height = dim.h;
+    init.dimension.content.ratio = dim.w / dim.h;
+    init.dimension.content.left = dim.left;
+    init.dimension.content.top = dim.top;
+    
+    init.dimension.max.x = dim.maxZoomed.x;
+    init.dimension.max.y = dim.maxZoomed.y;
+    init.dimension.max.scale = dim.maxZoomed.scale;
+    
+    init._execEvent("resize");
   }
   
   if (!(/SCRIPT|IFRAME|OBJECT|EMBED|AMP-IFRAME/i.test(ta.tagName))) {
@@ -379,6 +528,12 @@ HTMLElement.prototype.ElementPanZoom = function() {
     });
     
     animLoop = () => {
+      if (!el.querySelector("*")) {
+        window.cancelAnimationFrame(animLoop);
+        error.missing = "Missing child";
+        console.error(error.missing);
+        throw Error(error.missing); 
+      }
       if (isNaN(tr.x) || isNaN(tr.y) || isNaN(tr.scale)) { _resize() }
       
       ta.style.transition = "transform 0ms";
@@ -434,8 +589,6 @@ HTMLElement.prototype.ElementPanZoom = function() {
           anim.vel.x = 0;
           anim.vel.y = 0;
         }
-        anim.vel.x += (0 - anim.vel.x) * _clamp(0, 1, opt.motionDeceleration * anim.vsync.timestamp);
-        anim.vel.y += (0 - anim.vel.y) * _clamp(0, 1, opt.motionDeceleration * anim.vsync.timestamp);
         if (anim.a.finish == true) {
           tr.x += anim.vel.x * anim.vsync.timestamp;
           tr.y += anim.vel.y * anim.vsync.timestamp;
@@ -457,12 +610,39 @@ HTMLElement.prototype.ElementPanZoom = function() {
             }
           }
         }
+        anim.vel.x += (0 - anim.vel.x) * _clamp(0, 1, opt.motionDeceleration * anim.vsync.timestamp);
+        anim.vel.y += (0 - anim.vel.y) * _clamp(0, 1, opt.motionDeceleration * anim.vsync.timestamp);
       }
       
       ta.style.transform = `translate(${tr.x}px, ${tr.y}px) scale(${tr.scale})`;
-      window.requestAnimationFrame(animLoop);
+      
+      init.translation.x = tr.x;
+      init.translation.y = tr.y;
+      init.translation.scale = tr.scale;
+      
+      init.dimension.width = dim.zoomed.x * 2;
+      init.dimension.height = dim.zoomed.y * 2;
+      
+      init._execEvent("raf");
+      if (tr.x + tr.y + tr.scale != init.ev.moving.x + init.ev.moving.y + init.ev.moving.scale) {
+        init.ev.end.e = false;
+        init._execEvent("transform.move");
+      }
+      else {
+        if (init.ev.end.e == false && gesture.d == false) {
+          init._execEvent("transform.end");
+          init.ev.end.e = true;
+        }
+      }
+           
+      init.ev.moving.x = tr.x;
+      init.ev.moving.y = tr.y;
+      init.ev.moving.scale = tr.scale;
+      
+      if (init.isAnimate) {
+        window.requestAnimationFrame(animLoop);
+      }
     }
-    animLoop();
     _resize();
   }
   else {
@@ -470,4 +650,110 @@ HTMLElement.prototype.ElementPanZoom = function() {
     console.error(error.notSupported);
     throw TypeError(error.notSupported);
   }
+  
+  Object.defineProperties(init, {
+    x: {
+      get: function() { return tr.x },
+      set: function(v) { tr.x = _clamp(0 - dim.zoomed.x, dim.zoomed.x, v) },
+      enumerable: true,
+      configurable: true
+    },
+    y: {
+      get: function() { return tr.y },
+      set: function(v) { tr.y = _clamp(0 - dim.zoomed.y, dim.zoomed.y, v) },
+      enumerable: true,
+      configurable: true
+    },
+    scale: {
+      get: function() { return tr.scale },
+      set: function(v) { tr.scale = _clamp(1, dim.maxZoomed.scale, v) },
+      enumerable: true,
+      configurable: true
+    },
+    velocityX: {
+      get: function() { return anim.vel.x * anim.vsync.timestamp },
+      set: function(v) { anim.vel.x = v },
+      enumerable: true,
+      configurable: true
+    },
+    velocityY: {
+      get: function() { return anim.vel.y * anim.vsync.timestamp },
+      set: function(v) { anim.vel.y = v },
+      enumerable: true,
+      configurable: true
+    },
+  });
+  
+  init.setTranslation = (x, y, scale, duration, easing) => {
+    duration = duration ? duration : 0;
+    if (duration != 0) {
+      _animate(easing, x, y, scale, duration);
+    }
+    else {
+      ix = _clamp(0, Infinity, (dim.w * _clamp(1, dim.maxZoomed.scale, scale)) - el.clientWidth) / 2;
+      iy = _clamp(0, Infinity, (dim.h * _clamp(1, dim.maxZoomed.scale, scale)) - el.clientHeight) / 2;
+      anim.a.finish = true;
+      tr.scale = _clamp(1, dim.maxZoomed.scale, scale);
+      tr.x = _clamp(0 - ix, ix, x);
+      tr.y = _clamp(0 - iy, iy, y);
+    }
+    gesture.d = false;
+    gesture.m = false;
+  }
+  init.byTranslation = (x, y, scale, duration, easing) => {
+    duration = duration ? duration : 0;
+    if (duration != 0) {
+      _animate(easing, tr.x + x, tr.y + y, tr.scale + scale, duration);
+    }
+    else {
+      ix = _clamp(0, Infinity, (dim.w * _clamp(1, dim.maxZoomed.scale, tr.scale + scale)) - el.clientWidth) / 2;
+      iy = _clamp(0, Infinity, (dim.h * _clamp(1, dim.maxZoomed.scale, tr.scale + scale)) - el.clientHeight) / 2;
+      anim.a.finish = true;
+      tr.scale = _clamp(1, dim.maxZoomed.scale, tr.scale + scale);
+      tr.x = _clamp(0 - ix, ix, tr.x + x);
+      tr.y = _clamp(0 - iy, iy, tr.y + y);
+    }
+    gesture.d = false;
+    gesture.m = false;
+  }
+  init.reset = () => {
+    _resize();
+  }
+  init.updateOptions = (o) => {
+    opt.initialX = o.initialX ? o.initialX : opt.initialX;
+    opt.initialY = o.initialY ? o.initialY : opt.initialY;
+    opt.initialScale = o.initialScale ? o.initialScale : opt.initialScale;
+    opt.maxScale = o.maxScale ? o.maxScale : opt.maxScale;
+    opt.motionDeceleration = _clamp(0.01, 0.25, o.deceleration ? o.deceleration : opt.motionDeceleration);
+    opt.motionStop = _clamp(0.01, 4, o.stopMotion ? o.stopMotion : opt.motionStop);
+    opt.easeZoom = o.easeZoom ? o.easeZoom : opt.easeZoom;
+    opt.easeZoomDuration = _clamp(100, 750, o.easeZoomDuration ? o.easeZoomDuration : opt.easeZoomDuration);
+    _resize();
+  }
+  init.updateChild = (index) => {
+    ta = el.querySelectorAll("*")[index && typeof index == "number" ? index : 0];
+    init.el.content = ta;
+    if (!animLoop) {
+      animLoop();
+    }
+    _resize();
+  }
+  init.startAnimation = () => {
+    if (!init.isAnimate) {
+      init.isAnimate = true;
+      animLoop();
+    }
+  }
+  init.stopAnimation = () => {
+    if (init.isAnimate) {
+      init.isAnimate = false;
+    }
+  }
+  if (!el.hasAttribute("start-manually")) {
+    init.startAnimation();
+  }
+}
+
+HTMLElement.prototype.ElementPanZoom = function() {
+  new ElementPanZoom(this);
 }
