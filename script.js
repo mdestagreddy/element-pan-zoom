@@ -768,7 +768,7 @@ HTMLElement.prototype.ElementPanZoom = function(func) {
     this.func();
   }
   else {
-    if (typeof this.func != "function") {
+    if (typeof this.func != "function" && this.func != null) {
       let errorFunc = `(Type: ${typeof this.func}) => ${this.func} is not a function.`;
       console.error(JAVASCRIPT_NAME, errorFunc);
       throw TypeError(errorFunc);
