@@ -677,17 +677,22 @@ function ElementPanZoom(elem) {
       configurable: true
     },
     velocityX: {
-      get: function() { return anim.vel.x * anim.vsync.timestamp },
+      get: function() { return anim.vel.x },
       set: function(v) { anim.vel.x = v },
       enumerable: true,
       configurable: true
     },
     velocityY: {
-      get: function() { return anim.vel.y * anim.vsync.timestamp },
+      get: function() { return anim.vel.y },
       set: function(v) { anim.vel.y = v },
       enumerable: true,
       configurable: true
     },
+    calcFrame: {
+      get: function() { return anim.vsync.timestamp },
+      enumerable: true,
+      configurable: true
+    }
   });
   
   init.setTranslation = (x, y, scale, duration, easing) => {
