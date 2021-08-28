@@ -1,3 +1,10 @@
+/**
+  @2021 mdestagreddy Github
+**/
+
+var JAVASCRIPT_NAME = "[ElementPanZoom]";
+
+//Outside Function
 function ElementPanZoom(elem) {
   let init = this;
   let error = {}
@@ -6,7 +13,7 @@ function ElementPanZoom(elem) {
   let ta = el.querySelector("*");
   if (el.hasAttribute("element-pan-zoom-init")) {
     error.inited = `Warning: ${el} is already inited.`;
-    console.warn(error.inited);
+    console.warn(JAVASCRIPT_NAME, error.inited);
     return;
   }
   el.setAttribute("element-pan-zoom-init", "");
@@ -94,9 +101,8 @@ function ElementPanZoom(elem) {
   
   if (!ta) {
     error.child = "Your need element this child.";
-    console.error(error.child);
+    console.error(JAVASCRIPT_NAME, error.child);
     throw TypeError(error.child);
-    return;
   }
   let _bezier = (easingType, x) => {
     let eType = (easingType ? easingType : "").toLowerCase();
@@ -530,8 +536,8 @@ function ElementPanZoom(elem) {
     animLoop = () => {
       if (!el.querySelector("*")) {
         window.cancelAnimationFrame(animLoop);
-        error.missing = "Missing child";
-        console.error(error.missing);
+        error.missing = `Missing child ${ta}`;
+        console.error(JAVASCRIPT_NAME, error.missing);
         throw Error(error.missing); 
       }
       if (isNaN(tr.x) || isNaN(tr.y) || isNaN(tr.scale)) { _resize() }
@@ -646,8 +652,8 @@ function ElementPanZoom(elem) {
     _resize();
   }
   else {
-    error.notSupported = "Element not supported: " + ta.tagName;
-    console.error(error.notSupported);
+    error.notSupported = `Element not supported: ${ta.tagName}`;
+    console.error(JAVASCRIPT_NAME, error.notSupported);
     throw TypeError(error.notSupported);
   }
   
@@ -754,6 +760,18 @@ function ElementPanZoom(elem) {
   }
 }
 
-HTMLElement.prototype.ElementPanZoom = function() {
-  new ElementPanZoom(this);
+//Inside Function
+HTMLElement.prototype.ElementPanZoom = function(func) {
+  this.main = new ElementPanZoom(this);
+  this.func = func;
+  if (this.func != null && typeof this.func == "function") {
+    this.func();
+  }
+  else {
+    if (typeof this.func != "function") {
+      let errorFunc = `(Type: ${typeof this.func}) => ${this.func} is not a function.`;
+      console.error(JAVASCRIPT_NAME, errorFunc);
+      throw TypeError(errorFunc);
+    }
+  }
 }
