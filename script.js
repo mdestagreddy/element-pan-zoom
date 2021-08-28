@@ -645,6 +645,13 @@ function ElementPanZoom(elem) {
       init.ev.moving.y = tr.y;
       init.ev.moving.scale = tr.scale;
       
+      if (tr.scale > 1) {
+        el.style.cursor = "move";
+      }
+      else {
+        el.style.cursor = "default";
+      }
+      
       if (init.isAnimate) {
         window.requestAnimationFrame(animLoop);
       }
