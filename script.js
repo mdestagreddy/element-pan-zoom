@@ -199,6 +199,7 @@ function ElementPanZoom(elem) {
   }
   
   ta.style.position = "absolute";
+  ta.style.userSelect = "none";
   el.style.position = "relative";
   ta.style.display = "block";
   el.style.overflow = "hidden";
