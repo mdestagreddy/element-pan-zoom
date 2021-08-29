@@ -463,6 +463,7 @@ function ElementPanZoom(elem) {
         (dim.rect.top + ((el.clientHeight / 2) - gesture.start1.y)) * dim.maxZoomed.scale,
         dim.maxZoomed.scale, opt.easeZoomDuration);
     }
+    init._execEvent("gesture.doubletap");
   });
   
   let _resize = () => {
