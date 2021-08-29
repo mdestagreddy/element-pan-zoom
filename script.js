@@ -200,6 +200,7 @@ function ElementPanZoom(elem) {
   
   ta.style.position = "absolute";
   ta.style.userSelect = "none";
+  ta.style.userDrag = "none";
   el.style.position = "relative";
   ta.style.display = "block";
   el.style.overflow = "hidden";
