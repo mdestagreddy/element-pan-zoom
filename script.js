@@ -268,7 +268,13 @@ function ElementPanZoom(elem) {
     l: 0,
     distance: 0,
     newDistance: 0,
-    tar: {x: 0, y: 0}
+    tar: {x: 0, y: 0},
+    doubletap: {
+      timestart: 0,
+      timestamp: 0,
+      count: 0,
+      moved: false
+    }
   }
   
   let anim = {
@@ -306,8 +312,31 @@ function ElementPanZoom(elem) {
       anim.a.duration = duration;
     }
   }
+  let dbltapzoom = () => {
+    if (tr.scale > 1) {
+      _animate(opt.easeZoom, 0, 0, 1, opt.easeZoomDuration);
+    }
+    else {
+      dim.rect = el.getBoundingClientRect();
+      _animate(opt.easeZoom,
+        (dim.rect.left + ((el.clientWidth / 2) - gesture.start1.x)) * dim.maxZoomed.scale,
+        (dim.rect.top + ((el.clientHeight / 2) - gesture.start1.y)) * dim.maxZoomed.scale,
+        dim.maxZoomed.scale, opt.easeZoomDuration);
+    }
+    init._execEvent("gesture.doubletap");
+  }
   
   listeners("touchstart mousedown", (e) => {
+    gesture.doubletap.moved = false;
+    if (gesture.doubletap.count == 0) {
+      gesture.doubletap.timestart = performance.now();
+    }
+    gesture.doubletap.timestamp = performance.now();
+    if (gesture.doubletap.timestamp - gesture.doubletap.timestart > 300 || gesture.doubletap.moved) {
+      gesture.doubletap.count = 0;
+      gesture.doubletap.moved = false;
+    }
+    
     init.gesture.event.start = e;
     anim.a.finish = true;
     if (gesture.d != true && anim.a.finish == true) {
@@ -357,6 +386,7 @@ function ElementPanZoom(elem) {
     init.gesture.event.move = e;
     if (e.touches && anim.a.finish == true) { gesture.d = true; init.gesture.started = true; }
     if (gesture.d == true && anim.a.finish == true) {
+      gesture.doubletap.moved = true;
       gesture.length = e.touches ? e.touches.length : 1;
       gesture.move1.x = e.touches ? e.touches[0].clientX : e.clientX;
       gesture.move1.y = e.touches ? e.touches[0].clientY : e.clientY;
@@ -453,18 +483,14 @@ function ElementPanZoom(elem) {
       init._execEvent("gesture.end");
     }
   });
-  listeners("dblclick", () => {
-    if (tr.scale > 1) {
-      _animate(opt.easeZoom, 0, 0, 1, opt.easeZoomDuration);
+  
+  listeners("mouseup", () => {
+    gesture.doubletap.count += 1;
+    if (gesture.doubletap.count >= 2 && !gesture.doubletap.moved) {
+      dbltapzoom();
+      gesture.doubletap.count = 0;
+      gesture.doubletap.moved = false;
     }
-    else {
-      dim.rect = el.getBoundingClientRect();
-      _animate(opt.easeZoom,
-        (dim.rect.left + ((el.clientWidth / 2) - gesture.start1.x)) * dim.maxZoomed.scale,
-        (dim.rect.top + ((el.clientHeight / 2) - gesture.start1.y)) * dim.maxZoomed.scale,
-        dim.maxZoomed.scale, opt.easeZoomDuration);
-    }
-    init._execEvent("gesture.doubletap");
   });
   
   let _resize = () => {
