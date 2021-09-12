@@ -274,6 +274,10 @@ function ElementPanZoom(elem) {
       timestamp: 0,
       count: 0,
       moved: false
+    },
+    longtap: {
+      timestart: 0,
+      timestamp: 0
     }
   }
   
@@ -327,6 +331,7 @@ function ElementPanZoom(elem) {
   }
   
   listeners("touchstart mousedown", (e) => {
+    gesture.longtap.timestart = performance.now();
     gesture.doubletap.moved = false;
     if (gesture.doubletap.count == 0) {
       gesture.doubletap.timestart = performance.now();
@@ -386,6 +391,13 @@ function ElementPanZoom(elem) {
     init.gesture.event.move = e;
     if (e.touches && anim.a.finish == true) { gesture.d = true; init.gesture.started = true; }
     if (gesture.d == true && anim.a.finish == true) {
+      gesture.longtap.timestamp = performance.now();
+      if (!gesture.doubletap.moved && gesture.longtap.timestamp - gesture.longtap.timestart > 300) {
+        gesture.m = false;
+        gesture.doubletap.moved = true;
+        return;
+      }
+      
       gesture.doubletap.moved = true;
       gesture.length = e.touches ? e.touches.length : 1;
       gesture.move1.x = e.touches ? e.touches[0].clientX : e.clientX;
@@ -397,7 +409,7 @@ function ElementPanZoom(elem) {
         gesture.md.x = tr.x;
         gesture.md.y = tr.y;
       }
-      if (gesture.m != true || gesture.length - gesture.l != 0) {
+      if ((Math.abs(gesture.move1.x - gesture.start1.x) > 4 || Math.abs(gesture.move1.y - gesture.start1.y) > 4) && gesture.m != true || gesture.length - gesture.l != 0) {
         gesture.m = true;
         
         gesture.md.x = tr.x;
@@ -441,10 +453,10 @@ function ElementPanZoom(elem) {
   listeners("touchend mouseleave mouseup", (e) => {
     init.gesture.event.end = e;
     if (gesture.d == true && anim.a.finish == true) {
-      if (e.mouseleave) {
-        gesture.c.x = tr.x;
-        gesture.c.y = tr.y;
-      }
+      gesture.c.x = tr.x;
+      gesture.c.y = tr.y;
+      gesture.c.scale = tr.scale;
+      
       gesture.length = e.touches ? e.touches.length : 0;
       if (gesture.length == 0) {
         gesture.del.x = (tr.x - gesture.md.x) / gesture.time.ts;
